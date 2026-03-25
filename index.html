@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>ボケて セレクトチェッカー</title>
+  <meta name="description" content="ボケて(bokete)セレクト専用チェックツール — 画像を見ながら★評価">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========== Design System ========== */
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-card: #1c2333;
+      --bg-card-hover: #222d3f;
+      --border-color: #30363d;
+      --border-glow: rgba(88, 166, 255, 0.3);
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-purple: #bc8cff;
+      --star-active: #f0c040;
+      --star-inactive: #3d424a;
+      --star-hover: #f5d060;
+      --success: #3fb950;
+      --danger: #f85149;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.25s ease;
+      --font-main: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* ========== Reset & Base ========== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* ========== Header ========== */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .header-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      white-space: nowrap;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .header-stats {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ========== Buttons ========== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .btn-icon {
+      font-size: 0.85rem;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: linear-gradient(135deg, #1f6feb, #8957e5);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: opacity var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    /* ========== Filter Tabs ========== */
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .filter-tab {
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .filter-tab:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-secondary);
+    }
+
+    .filter-tab.active {
+      background: rgba(88, 166, 255, 0.15);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    /* ========== Card Grid ========== */
+    .grid-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    /* ========== Card ========== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-card);
+    }
+
+    .card:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .card-image-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: var(--bg-secondary);
+      overflow: hidden;
+    }
+
+    .card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .card-image-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .card-date-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 2px 8px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .card-body {
+      padding: 12px;
+    }
+
+    .card-text {
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 3.8em;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ========== Star Rating ========== */
+    .star-rating {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--star-inactive);
+      cursor: pointer;
+      padding: 2px;
+      transition: all var(--transition-fast);
+      line-height: 1;
+    }
+
+    .star-btn:hover {
+      color: var(--star-hover);
+      transform: scale(1.2);
+    }
+
+    .star-btn.active {
+      color: var(--star-active);
+    }
+
+    .star-btn.saving {
+      animation: pulse 0.6s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+    }
+
+    .star-clear {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 2px 4px;
+      margin-left: 4px;
+      transition: color var(--transition-fast);
+    }
+
+    .star-clear:hover {
+      color: var(--danger);
+    }
+
+    /* ========== Card Link ========== */
+    .card-link {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .card-link:hover {
+      color: var(--accent-blue);
+    }
+
+    /* ========== Setup Modal ========== */
+    .setup-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .setup-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .setup-box h2 {
+      color: var(--accent-blue);
+      margin-bottom: 16px;
+    }
+
+    .setup-box p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .setup-box input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-family: var(--font-main);
+      outline: none;
+      transition: border-color var(--transition-fast);
+    }
+
+    .setup-box input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    /* ========== Loading Overlay ========== */
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(13, 17, 23, 0.9);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* ========== Toast ========== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      padding: 10px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      z-index: 200;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--danger);
+    }
+
+    /* ========== Empty State ========== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    /* ========== Load More ========== */
+    .load-more-wrapper {
+      text-align: center;
+      padding: 24px 0 40px;
+    }
+
+    .btn-load-more {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 32px;
+      background: linear-gradient(135deg, rgba(31, 111, 235, 0.2), rgba(137, 87, 229, 0.2));
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: var(--radius-md);
+      color: var(--accent-blue);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    .btn-load-more:hover {
+      background: linear-gradient(135deg, rgba(31, 111, 235, 0.3), rgba(137, 87, 229, 0.3));
+      border-color: var(--accent-blue);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(88, 166, 255, 0.2);
+    }
+
+    .load-more-info {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .empty-state .emoji {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 600px) {
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .header-controls {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-tab {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+      }
+    }
+
+    @media (min-width: 601px) and (max-width: 900px) {
+      .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      }
+    }
+
+    /* ========== Help Modal ========== */
+    .help-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .help-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      color: var(--text-primary);
+    }
+
+    .help-box h2 {
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+    }
+
+    .help-box h3 {
+      color: var(--accent-blue);
+      margin: 20px 0 10px;
+      font-size: 1rem;
+    }
+
+    .help-box p, .help-box li {
+      color: var(--text-secondary);
+      line-height: 1.7;
+      font-size: 0.9rem;
+    }
+
+    .help-box ul, .help-box ol {
+      padding-left: 20px;
+      margin: 8px 0;
+    }
+
+    .help-box li {
+      margin: 4px 0;
+    }
+
+    .help-box code {
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.85rem;
+      color: var(--accent-blue);
+    }
+
+    .help-box .help-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+    }
+
+    .help-close {
+      display: block;
+      margin: 24px auto 0;
+      padding: 10px 32px;
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: opacity var(--transition-fast);
+    }
+
+    .help-close:hover {
+      opacity: 0.85;
+    }
+
+    @media (max-width: 600px) {
+      .help-box {
+        padding: 20px;
+        max-height: 85vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Setup Modal -->
+  <div id="setupModal" class="setup-modal" style="display:none;">
+    <div class="setup-box">
+      <h2>⚙️ 初期設定</h2>
+      <p>
+        Google Apps Script のWebアプリURLを入力してください。<br>
+        <small style="color:var(--text-muted);">GASデプロイ後に発行されるURLです</small>
+      </p>
+      <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/..." />
+      <button class="btn-primary" onclick="saveGasUrl()">保存してデータを読み込む</button>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="help-modal" style="display:none;" onclick="if(event.target===this)closeHelp()">
+    <div class="help-box">
+      <h2>❓ 使い方ガイド</h2>
+
+      <h3>⭐ 評価する</h3>
+      <ul>
+        <li>各カードの★をクリックで評価（1〜3つ星）</li>
+        <li>同じ★をもう一度クリックで取り消し</li>
+        <li>評価はスプレッドシートに<strong>即時反映</strong>されます</li>
+      </ul>
+
+      <h3>🔍 フィルタ・ソート</h3>
+      <ul>
+        <li>上部タブで評価別に絞り込み（全て / 未評価 / ★ / ★★ / ★★★）</li>
+        <li>「新しい順」「古い順」で並び替え</li>
+        <li>50件ずつ表示、「もっと見る」で追加読み込み</li>
+      </ul>
+
+      <h3>🖼️ 画像について</h3>
+      <ul>
+        <li>bokete.jpのCDN制限により、一部の画像は表示されません</li>
+        <li>「🖼️ boketeで見る ↗」リンクをクリックするとbokete.jpで確認できます</li>
+      </ul>
+
+      <div class="help-section">
+        <h3>🛠️ セットアップ手順</h3>
+        <ol>
+          <li>スプレッドシートの「拡張機能」→「Apps Script」を開く</li>
+          <li>エディタに <code>gas/Code.gs</code> の内容を貼り付けて保存</li>
+          <li>「デプロイ」→「新しいデプロイ」→ ウェブアプリ → アクセス「全員」</li>
+          <li>発行されたURLを⚙️ボタンから入力</li>
+        </ol>
+      </div>
+
+      <div class="help-section">
+        <h3>📷 新しいボケを追加した時</h3>
+        <ol>
+          <li>スプレッドシートに新しい行を追加</li>
+          <li>GASエディタで <code>batchFetchImageUrls</code> を▶️実行</li>
+          <li>このアプリで「↻ 再読込」を押す</li>
+        </ol>
+      </div>
+
+      <button class="help-close" onclick="closeHelp()">閉じる</button>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <div class="loading-text">読み込み中...</div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-title">🎭 ボケて セレクトチェッカー</div>
+      <div class="header-controls">
+        <div class="filter-tabs" id="filterTabs">
+          <button class="filter-tab active" data-filter="all">全て</button>
+          <button class="filter-tab" data-filter="0">未評価</button>
+          <button class="filter-tab" data-filter="1">★</button>
+          <button class="filter-tab" data-filter="2">★★</button>
+          <button class="filter-tab" data-filter="3">★★★</button>
+        </div>
+        <button class="btn" id="sortBtn" onclick="toggleSort()">
+          <span class="btn-icon" id="sortIcon">↓</span>
+          <span id="sortLabel">新しい順</span>
+        </button>
+        <button class="btn" onclick="reloadData()">
+          <span class="btn-icon">↻</span> 再読込
+        </button>
+        <button class="btn" onclick="openSettings()" title="GAS URL設定">
+          <span class="btn-icon">⚙️</span>
+        </button>
+        <button class="btn" onclick="openHelp()" title="使い方">
+          <span class="btn-icon">❓</span>
+        </button>
+        <span class="header-stats" id="statsText">-</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Card Grid -->
+  <main class="grid-container">
+    <div class="card-grid" id="cardGrid"></div>
+    <div class="load-more-wrapper" id="loadMoreWrapper" style="display:none;">
+      <button class="btn-load-more" onclick="loadMore()">もっと見る</button>
+      <div class="load-more-info" id="loadMoreInfo"></div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="emoji">🤔</div>
+      <p>表示するデータがありません</p>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== Configuration ==========
+    const STORAGE_KEY = 'bokete_checker_gas_url';
+    const IMAGE_CACHE_KEY = 'bokete_checker_images';
+    let GAS_URL = localStorage.getItem(STORAGE_KEY) || '';
+
+    // ========== State ==========
+    let allData = [];
+    let sortOrder = 'desc';
+    let activeFilter = 'all';
+    let imageCache = {};
+    const PAGE_SIZE = 50;
+    let displayCount = PAGE_SIZE;
+
+    // ========== Init ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        imageCache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+      } catch(e) { imageCache = {}; }
+
+      initFilterTabs();
+
+      if (!GAS_URL || !GAS_URL.startsWith('https://script.google.com/')) {
+        GAS_URL = '';
+        localStorage.removeItem(STORAGE_KEY);
+        openSettings();
+        return;
+      }
+      loadData();
+    });
+
+    function openSettings() {
+      const modal = document.getElementById('setupModal');
+      const input = document.getElementById('gasUrlInput');
+      input.value = GAS_URL || '';
+      modal.style.display = 'flex';
+      setTimeout(() => { input.focus(); input.select(); }, 100);
+    }
+
+    function openHelp() {
+      document.getElementById('helpModal').style.display = 'flex';
+    }
+
+    function closeHelp() {
+      document.getElementById('helpModal').style.display = 'none';
+    }
+
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      if (!url) {
+        showToast('URLを入力してください', 'error');
+        return;
+      }
+      if (!url.startsWith('https://script.google.com/')) {
+        showToast('Google Apps ScriptのURL形式が正しくありません', 'error');
+        return;
+      }
+      GAS_URL = url;
+      localStorage.setItem(STORAGE_KEY, url);
+      document.getElementById('setupModal').style.display = 'none';
+      loadData();
+    }
+
+    // ========== Data Loading ==========
+    async function loadData() {
+      showLoading(true);
+      try {
+        const data = await fetchFromGAS('getData');
+        allData = data.data || [];
+        displayCount = PAGE_SIZE;
+        renderCards();
+        showToast(`${allData.length}件を読み込みました`, 'success');
+        fetchMissingImages();
+      } catch (err) {
+        console.error('Load error:', err);
+        showToast('データの読み込みに失敗しました', 'error');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function reloadData() {
+      loadData();
+    }
+
+    // ========== GAS Communication ==========
+    async function fetchFromGAS(action, params = {}) {
+      const url = new URL(GAS_URL);
+      url.searchParams.set('action', action);
+      Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
+
+      return new Promise((resolve, reject) => {
+        const callbackName = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const script = document.createElement('script');
+
+        window[callbackName] = (data) => {
+          delete window[callbackName];
+          document.head.removeChild(script);
+          resolve(data);
+        };
+
+        script.onerror = () => {
+          delete window[callbackName];
+          document.head.removeChild(script);
+          reject(new Error('Network error'));
+        };
+
+        url.searchParams.set('callback', callbackName);
+        script.src = url.toString();
+        document.head.appendChild(script);
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            try { document.head.removeChild(script); } catch(e) {}
+            reject(new Error('Request timed out'));
+          }
+        }, 30000);
+      });
+    }
+
+    async function postToGAS(payload) {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return { success: true };
+    }
+
+    // ========== Image Loading ==========
+    async function fetchMissingImages() {
+      const missing = allData.filter(d => !d.imageUrl && !imageCache[d.bokeId]);
+      if (missing.length === 0) return;
+
+      for (let i = 0; i < missing.length; i += 5) {
+        const batch = missing.slice(i, i + 5);
+        const promises = batch.map(d => fetchSingleImage(d.bokeId));
+        await Promise.allSettled(promises);
+        if (i + 5 < missing.length) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    }
+
+    async function fetchSingleImage(bokeId) {
+      if (imageCache[bokeId]) return;
+      try {
+        const data = await fetchFromGAS('getImage', { bokeId });
+        if (data.imageUrl) {
+          imageCache[bokeId] = data.imageUrl;
+          localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(imageCache));
+
+          const imgEl = document.querySelector(`[data-boke-id="${bokeId}"] .card-image`);
+          const placeholder = document.querySelector(`[data-boke-id="${bokeId}"] .card-image-placeholder`);
+          if (imgEl) {
+            let fixedUrl = data.imageUrl;
+            if (fixedUrl.startsWith('//')) fixedUrl = 'https:' + fixedUrl;
+            imgEl.src = fixedUrl;
+            imgEl.style.display = 'block';
+          }
+          if (placeholder) {
+            placeholder.style.display = 'none';
+          }
+        }
+      } catch (e) {
+        console.error('Image fetch error for ' + bokeId + ':', e);
+      }
+    }
+
+    // ========== Rendering ==========
+    function getFilteredData() {
+      let filtered = [...allData];
+
+      if (activeFilter !== 'all') {
+        const filterVal = parseInt(activeFilter);
+        filtered = filtered.filter(d => d.rating === filterVal);
+      }
+
+      filtered.sort((a, b) => {
+        return sortOrder === 'desc' ? b.rowIndex - a.rowIndex : a.rowIndex - b.rowIndex;
+      });
+
+      return filtered;
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('cardGrid');
+      const empty = document.getElementById('emptyState');
+      const loadMoreWrapper = document.getElementById('loadMoreWrapper');
+      const loadMoreInfo = document.getElementById('loadMoreInfo');
+
+      const filtered = getFilteredData();
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        loadMoreWrapper.style.display = 'none';
+        return;
+      }
+
+      empty.style.display = 'none';
+
+      const visible = filtered.slice(0, displayCount);
+      grid.innerHTML = visible.map(item => createCardHTML(item)).join('');
+
+      const remaining = filtered.length - displayCount;
+      if (remaining > 0) {
+        loadMoreWrapper.style.display = 'block';
+        loadMoreInfo.textContent = `表示中: ${visible.length} / ${filtered.length}件（残り${remaining}件）`;
+      } else {
+        loadMoreWrapper.style.display = 'none';
+      }
+
+      updateStats();
+      startImageTimeouts();
+    }
+
+    function loadMore() {
+      displayCount += PAGE_SIZE;
+      renderCards();
+      fetchMissingImages();
+    }
+
+    function createCardHTML(item) {
+      let imgUrl = item.imageUrl || imageCache[item.bokeId] || '';
+      if (imgUrl && imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+      const hasImage = !!imgUrl;
+
+      const stars = [1, 2, 3].map(n =>
+        `<button class="star-btn ${item.rating >= n ? 'active' : ''}"
+                 onclick="setRating(${item.rowIndex}, '${item.bokeId}', ${n})"
+                 aria-label="${n}つ星">★</button>`
+      ).join('');
+
+      return `
+        <div class="card" data-boke-id="${item.bokeId}" data-row="${item.rowIndex}">
+          <div class="card-image-wrapper">
+            <img class="card-image"
+                 src="${hasImage ? imgUrl : ''}"
+                 alt="${escapeHtml(item.text)}"
+                 style="${hasImage ? '' : 'display:none'}"
+                 loading="lazy"
+                 referrerpolicy="no-referrer"
+                 onload="this.nextElementSibling.style.display='none'; clearTimeout(this._imgTimeout);"
+                 onerror="this.style.display='none'; imgFallback(this.nextElementSibling, '${item.bokeId}');" />
+            <a class="card-image-placeholder" href="https://bokete.jp/boke/${item.bokeId}" target="_blank" rel="noopener noreferrer"
+               style="${hasImage ? 'display:none' : 'display:flex'}; text-decoration:none; flex-direction:column; gap:8px; align-items:center; justify-content:center;">
+              ${hasImage ? '<div class="loading-spinner"></div>' : '<div style="font-size:2rem;">🖼️</div><div style="font-size:0.75rem; color:var(--accent-blue);">boketeで見る ↗</div>'}
+            </a>
+            <div class="card-date-badge">${item.date || '—'}</div>
+          </div>
+          <div class="card-body">
+            <div class="card-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</div>
+            <div class="card-footer">
+              <div class="star-rating">
+                ${stars}
+                <button class="star-clear" onclick="setRating(${item.rowIndex}, '${item.bokeId}', 0)"
+                        style="${item.rating > 0 ? '' : 'visibility:hidden'}">✕</button>
+              </div>
+              <a class="card-link" href="https://bokete.jp/boke/${item.bokeId}" target="_blank" rel="noopener">
+                bokete ↗
+              </a>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ========== Rating ==========
+    async function setRating(rowIndex, bokeId, rating) {
+      const item = allData.find(d => d.bokeId === bokeId);
+      if (item) {
+        if (item.rating === rating) {
+          rating = 0;
+        }
+        item.rating = rating;
+      }
+
+      const card = document.querySelector(`[data-boke-id="${bokeId}"]`);
+      if (card) {
+        const starBtns = card.querySelectorAll('.star-btn');
+        starBtns.forEach((btn, i) => {
+          btn.classList.toggle('active', i < rating);
+          btn.classList.add('saving');
+        });
+        const clearBtn = card.querySelector('.star-clear');
+        if (clearBtn) clearBtn.style.visibility = rating > 0 ? 'visible' : 'hidden';
+      }
+
+      try {
+        await postToGAS({ action: 'updateRating', row: rowIndex, rating: rating });
+        if (card) {
+          card.querySelectorAll('.star-btn').forEach(b => b.classList.remove('saving'));
+        }
+        const ratingText = rating > 0 ? '★'.repeat(rating) : 'クリア';
+        showToast(`評価を更新: ${ratingText}`, 'success');
+      } catch (err) {
+        console.error('Rating update error:', err);
+        showToast('評価の更新に失敗しました', 'error');
+        if (card) {
+          card.querySelectorAll('.star-btn').forEach(b => b.classList.remove('saving'));
+        }
+      }
+      updateStats();
+    }
+
+    // ========== Sort ==========
+    function toggleSort() {
+      sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+      document.getElementById('sortIcon').textContent = sortOrder === 'desc' ? '↓' : '↑';
+      document.getElementById('sortLabel').textContent = sortOrder === 'desc' ? '新しい順' : '古い順';
+      displayCount = PAGE_SIZE;
+      renderCards();
+    }
+
+    // ========== Filter ==========
+    function initFilterTabs() {
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          activeFilter = tab.dataset.filter;
+          displayCount = PAGE_SIZE;
+          renderCards();
+        });
+      });
+    }
+
+    // ========== Stats ==========
+    function updateStats() {
+      const total = allData.length;
+      const rated = allData.filter(d => d.rating > 0).length;
+      const unrated = total - rated;
+      document.getElementById('statsText').textContent =
+        `全${total}件 | 評価済${rated} | 未評価${unrated}`;
+    }
+
+    // ========== Image Timeout ==========
+    function imgFallback(placeholder, bokeId) {
+      placeholder.style.display = 'flex';
+      placeholder.innerHTML = '<div style="font-size:2rem;">🖼️</div><div style="font-size:0.75rem; color:var(--accent-blue);">boketeで見る ↗</div>';
+    }
+
+    function startImageTimeouts() {
+      document.querySelectorAll('.card-image').forEach(img => {
+        if (img.complete && img.naturalWidth > 0) return;
+        img._imgTimeout = setTimeout(() => {
+          if (!img.complete || img.naturalWidth === 0) {
+            img.style.display = 'none';
+            const placeholder = img.nextElementSibling;
+            if (placeholder) imgFallback(placeholder, '');
+          }
+        }, 5000);
+      });
+    }
+
+    // ========== UI Helpers ==========
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => { toast.classList.remove('show'); }, 2500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+
+</html>
