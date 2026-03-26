@@ -612,6 +612,55 @@
         max-height: 85vh;
       }
     }
+
+    /* ========== Setup Steps ========== */
+    .setup-steps {
+      margin: 16px 0;
+      padding: 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+    }
+
+    .setup-steps summary {
+      color: var(--accent-blue);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .setup-steps summary:hover {
+      opacity: 0.8;
+    }
+
+    .setup-steps ol {
+      margin: 12px 0 0;
+      padding-left: 20px;
+    }
+
+    .setup-steps li {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      margin: 4px 0;
+    }
+
+    .setup-steps strong {
+      color: var(--text-primary);
+    }
+
+    .setup-steps .step-note {
+      display: block;
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: rgba(88, 166, 255, 0.08);
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 0 4px 4px 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
   </style>
 </head>
 
@@ -622,9 +671,24 @@
     <div class="setup-box">
       <h2>⚙️ 初期設定</h2>
       <p>
-        Google Apps Script のWebアプリURLを入力してください。<br>
-        <small style="color:var(--text-muted);">GASデプロイ後に発行されるURLです</small>
+        Google Apps Script のWebアプリURLを入力してください。
       </p>
+
+      <details class="setup-steps">
+        <summary>📖 URLの取得方法（クリックで開く）</summary>
+        <ol>
+          <li>対象のスプレッドシートを開く</li>
+          <li>メニュー「<strong>拡張機能</strong>」→「<strong>Apps Script</strong>」</li>
+          <li>エディタにCode.gsの内容を貼り付けて <strong>Ctrl+S</strong> で保存</li>
+          <li>右上「<strong>デプロイ</strong>」→「<strong>新しいデプロイ</strong>」</li>
+          <li>⚙️アイコン → 種類：<strong>ウェブアプリ</strong></li>
+          <li>実行するユーザー：<strong>自分</strong></li>
+          <li>アクセスできるユーザー：<strong>全員</strong></li>
+          <li>「<strong>デプロイ</strong>」→ 表示された<strong>URL</strong>をコピー</li>
+        </ol>
+        <span class="step-note">⚠️ コード変更時は「デプロイを管理」ではなく必ず「新しいデプロイ」を選んでください。URLが毎回変わります。</span>
+      </details>
+
       <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/..." />
       <button class="btn-primary" onclick="saveGasUrl()">保存してデータを読み込む</button>
     </div>
