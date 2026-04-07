@@ -779,17 +779,13 @@
       </p>
 
       <details class="setup-steps">
-        <summary>📖 URLの取得方法（クリックで開く）</summary>
+        <summary>📖 URLの取得方法</summary>
         <ol>
-          <li><a href="https://docs.google.com/spreadsheets/d/1Jwgs4wXtMtPjKuLu08EwuBX1pZ4X95MF_0n5qiK2akU/edit?gid=363775993#gid=363775993" target="_blank" rel="noopener" style="color:var(--accent-blue);">📊 スプレッドシートを開く</a></li>
-          <li>メニュー「<strong>拡張機能</strong>」→「<strong>Apps Script</strong>」</li>
-          <li><a href="https://github.com/ossam/bokete-checker/blob/main/gas/Code.gs" target="_blank" rel="noopener" style="color:var(--accent-blue);">📄 Code.gs を開く</a> → 「Raw」→ 全選択コピー → エディタに貼り付けて <strong>Ctrl+S</strong> で保存</li>
-          <li>右上「<strong>デプロイ</strong>」→「<strong>新しいデプロイ</strong>」</li>
-          <li>⚙️アイコン → 種類：<strong>ウェブアプリ</strong></li>
-          <li>実行するユーザー：<strong>自分</strong> ／ アクセス：<strong>全員</strong></li>
-          <li>「<strong>デプロイ</strong>」→ 表示された<strong>URL</strong>をコピーして下の欄に貼り付け</li>
+          <li><a href="https://docs.google.com/spreadsheets/d/1Jwgs4wXtMtPjKuLu08EwuBX1pZ4X95MF_0n5qiK2akU/edit?gid=363775993#gid=363775993" target="_blank" rel="noopener" style="color:var(--accent-blue);">スプレッドシート</a>を開き、<strong>拡張機能 → Apps Script</strong></li>
+          <li><a href="https://github.com/ossam/bokete-checker/blob/main/gas/Code.gs" target="_blank" rel="noopener" style="color:var(--accent-blue);">Code.gs</a>をコピーして貼り付け、保存</li>
+          <li><strong>デプロイ → 新しいデプロイ</strong>（ウェブアプリ／アクセス：全員）</li>
+          <li>表示された<strong>URL</strong>を下の欄に貼り付け</li>
         </ol>
-        <span class="step-note">⚠️ コード変更時は「デプロイを管理」ではなく必ず「新しいデプロイ」を選んでください。URLが毎回変わります。</span>
       </details>
 
       <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/..." />
@@ -800,44 +796,23 @@
   <!-- Help Modal -->
   <div id="helpModal" class="help-modal" style="display:none;" onclick="if(event.target===this)closeHelp()">
     <div class="help-box">
-      <h2>❓ 使い方ガイド</h2>
+      <h2>❓ 使い方</h2>
 
-      <h3>⭐ 評価する</h3>
+      <h3>基本操作</h3>
       <ul>
-        <li>各カードの★をクリックで評価（1〜3つ星）</li>
-        <li>同じ★をもう一度クリックで取り消し</li>
-        <li>評価はスプレッドシートに<strong>即時反映</strong>されます</li>
-      </ul>
-
-      <h3>🔍 フィルタ・ソート</h3>
-      <ul>
-        <li>上部タブで評価別に絞り込み（全て / 未評価 / ★ / ★★ / ★★★）</li>
-        <li>「新しい順」「古い順」で並び替え</li>
-        <li>50件ずつ表示、「もっと見る」で追加読み込み</li>
-      </ul>
-
-      <h3>🖼️ 画像について</h3>
-      <ul>
-        <li>bokete.jpのCDN制限により、一部の画像は表示されません</li>
-        <li>「🖼️ boketeで見る ↗」リンクをクリックするとbokete.jpで確認できます</li>
+        <li><strong>★</strong>：クリックで1〜3つ星評価／同じ★で取り消し</li>
+        <li><strong>OK / NG</strong>：判定／同じボタンで解除</li>
+        <li><strong>photo by / odai by / boke by</strong>：クリックでコピー</li>
+        <li>上部タブで絞り込み、ソートで並び替え</li>
+        <li>すべて<strong>スプレッドシートに即時反映</strong></li>
       </ul>
 
       <div class="help-section">
-        <h3>🛠️ セットアップ手順</h3>
+        <h3>セットアップ</h3>
         <ol>
-          <li>スプレッドシートの「拡張機能」→「Apps Script」を開く</li>
-          <li>エディタに <code>gas/Code.gs</code> の内容を貼り付けて保存</li>
+          <li>スプレッドシートの「拡張機能」→「Apps Script」を開き、<code>gas/Code.gs</code>を貼り付けて保存</li>
           <li>「デプロイ」→「新しいデプロイ」→ ウェブアプリ → アクセス「全員」</li>
           <li>発行されたURLを⚙️ボタンから入力</li>
-        </ol>
-      </div>
-
-      <div class="help-section">
-        <h3>📷 新しいボケを追加した時</h3>
-        <ol>
-          <li>スプレッドシートに新しい行を追加</li>
-          <li>GASエディタで <code>batchFetchImageUrls</code> を▶️実行</li>
-          <li>このアプリで「↻ 再読込」を押す</li>
         </ol>
       </div>
 
