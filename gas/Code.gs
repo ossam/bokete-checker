@@ -20,7 +20,11 @@ var COL_RATING = 2;      // C: オススメ
 var COL_URL = 3;         // D: URL
 var COL_TEXT = 4;         // E: テキスト
 var COL_ID = 5;           // F: ID
+var COL_JUDGMENT = 8;     // I: 判定 (OK/NG)
 var COL_IMAGE_CACHE = 36; // AK: 画像URLキャッシュ（既存データと干渉しない十分右の列）
+var COL_PHOTO_BY = 37;    // AL: photo by キャッシュ
+var COL_ODAI_BY = 38;     // AM: odai by キャッシュ
+var COL_BOKE_BY = 39;     // AN: boke by キャッシュ
 
 /**
  * GET リクエスト処理
@@ -35,6 +39,9 @@ function doGet(e) {
     } else if (action === 'getImage') {
       var bokeId = e.parameter.bokeId;
       result = getImageUrl(bokeId);
+    } else if (action === 'getMeta') {
+      var bokeId2 = e.parameter.bokeId;
+      result = getMeta(bokeId2);
     } else {
       result = { error: 'Unknown action: ' + action };
     }
@@ -71,6 +78,8 @@ function doPost(e) {
       result = updateRating(params.row, params.rating);
     } else if (action === 'batchUpdateRating') {
       result = batchUpdateRating(params.updates);
+    } else if (action === 'updateJudgment') {
+      result = updateJudgment(params.row, params.judgment);
     } else {
       result = { error: 'Unknown action: ' + action };
     }
@@ -94,7 +103,7 @@ function getData() {
     return { data: [] };
   }
 
-  var range = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, COL_IMAGE_CACHE + 1);
+  var range = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, COL_BOKE_BY + 1);
   var values = range.getValues();
   var data = [];
 
@@ -120,16 +129,22 @@ function getData() {
     }
 
     var imageUrl = row[COL_IMAGE_CACHE] || '';
+    var judgment = (row[COL_JUDGMENT] || '').toString().trim().toUpperCase();
+    if (judgment !== 'OK' && judgment !== 'NG') judgment = '';
 
     data.push({
       rowIndex: i + DATA_START_ROW,
       date: dateStr,
       rating: ratingNum,
       ratingRaw: ratingStr,
+      judgment: judgment,
       text: (row[COL_TEXT] || '').toString(),
       bokeId: bokeId.toString(),
       bokeUrl: (row[COL_URL] || '').toString(),
-      imageUrl: imageUrl.toString()
+      imageUrl: imageUrl.toString(),
+      photoBy: (row[COL_PHOTO_BY] || '').toString(),
+      odaiBy: (row[COL_ODAI_BY] || '').toString(),
+      bokeBy: (row[COL_BOKE_BY] || '').toString()
     });
   }
 
@@ -219,6 +234,97 @@ function scrapeBokeImageUrl(bokeId) {
 }
 
 /**
+ * photo by / odai by / boke by を取得（キャッシュ優先）
+ */
+function getMeta(bokeId) {
+  if (!bokeId) return { error: 'bokeId is required' };
+
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  var lastRow = sheet.getLastRow();
+  var idRange = sheet.getRange(DATA_START_ROW, COL_ID + 1, lastRow - DATA_START_ROW + 1, 1);
+  var ids = idRange.getValues();
+
+  var targetRow = -1;
+  for (var i = 0; i < ids.length; i++) {
+    if (ids[i][0].toString() === bokeId.toString()) {
+      targetRow = i + DATA_START_ROW;
+      break;
+    }
+  }
+  if (targetRow === -1) return { error: 'bokeId not found: ' + bokeId };
+
+  // キャッシュ確認 (AL/AM/AN)
+  var metaRange = sheet.getRange(targetRow, COL_PHOTO_BY + 1, 1, 3).getValues()[0];
+  var photoBy = (metaRange[0] || '').toString();
+  var odaiBy = (metaRange[1] || '').toString();
+  var bokeBy = (metaRange[2] || '').toString();
+
+  if (photoBy && odaiBy && bokeBy) {
+    return { photoBy: photoBy, odaiBy: odaiBy, bokeBy: bokeBy, cached: true };
+  }
+
+  // スクレイピング
+  var meta = scrapeBokeMeta(bokeId);
+  if (!meta) return { error: 'Could not fetch meta for bokeId: ' + bokeId };
+
+  sheet.getRange(targetRow, COL_PHOTO_BY + 1).setValue(meta.photoBy || '');
+  sheet.getRange(targetRow, COL_ODAI_BY + 1).setValue(meta.odaiBy || '');
+  sheet.getRange(targetRow, COL_BOKE_BY + 1).setValue(meta.bokeBy || '');
+
+  return { photoBy: meta.photoBy, odaiBy: meta.odaiBy, bokeBy: meta.bokeBy, cached: false };
+}
+
+/**
+ * bokete.jpページからphoto by / odai by / boke byを抽出
+ * HTMLに埋め込まれたJSONから取得
+ * 構造: "id":<bokeId>... "odai":{ ..."user":{..."nick":"odai by"}..."photo":{..."ownerName":"photo by"}... }, "user":{..."nick":"boke by"...}
+ */
+function scrapeBokeMeta(bokeId) {
+  try {
+    var url = 'https://bokete.jp/boke/' + bokeId;
+    var response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    if (response.getResponseCode() !== 200) return null;
+
+    var html = response.getContentText();
+    var idx = html.indexOf('"id":' + bokeId);
+    if (idx === -1) return null;
+    var slice = html.substring(idx);
+
+    // 順序: 最初に出る "nick" が odai.user.nick (= odai by)
+    var odaiMatch = slice.match(/"nick":"([^"]*)"/);
+    var photoMatch = slice.match(/"ownerName":"([^"]*)"/);
+    var bokeBy = '';
+    if (photoMatch) {
+      var afterPhoto = slice.substring(slice.indexOf('"ownerName"'));
+      var bokeMatch = afterPhoto.match(/"nick":"([^"]*)"/);
+      if (bokeMatch) bokeBy = decodeUnicodeEscapes(bokeMatch[1]);
+    }
+
+    return {
+      odaiBy: odaiMatch ? decodeUnicodeEscapes(odaiMatch[1]) : '',
+      photoBy: photoMatch ? decodeUnicodeEscapes(photoMatch[1]) : '',
+      bokeBy: bokeBy
+    };
+  } catch (err) {
+    Logger.log('Error scraping meta for bokeId ' + bokeId + ': ' + err);
+    return null;
+  }
+}
+
+/**
+ * \uXXXX エスケープを実文字に変換
+ */
+function decodeUnicodeEscapes(str) {
+  return str.replace(/\\u([0-9a-fA-F]{4})/g, function(m, hex) {
+    return String.fromCharCode(parseInt(hex, 16));
+  });
+}
+
+/**
  * 一括画像URL取得（初回セットアップ用）
  * GASのスクリプトエディタから手動実行する
  */
@@ -293,6 +399,25 @@ function batchUpdateRating(updates) {
 }
 
 /**
+ * I列の判定（OK/NG）を更新
+ */
+function updateJudgment(row, judgment) {
+  if (!row) {
+    return { error: 'row is required' };
+  }
+
+  var val = (judgment || '').toString().trim().toUpperCase();
+  if (val !== 'OK' && val !== 'NG' && val !== '') {
+    return { error: 'judgment must be OK, NG, or empty' };
+  }
+
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  sheet.getRange(row, COL_JUDGMENT + 1).setValue(val);
+
+  return { success: true, row: row, judgment: val };
+}
+
+/**
  * 数値の評価を★文字列に変換
  */
 function ratingToString(rating) {
@@ -309,5 +434,8 @@ function ratingToString(rating) {
 function setupImageCacheColumn() {
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   sheet.getRange(HEADER_ROW, COL_IMAGE_CACHE + 1).setValue('画像URL');
-  Logger.log('Setup complete: AK列に「画像URL」ヘッダーを追加しました。');
+  sheet.getRange(HEADER_ROW, COL_PHOTO_BY + 1).setValue('photo by');
+  sheet.getRange(HEADER_ROW, COL_ODAI_BY + 1).setValue('odai by');
+  sheet.getRange(HEADER_ROW, COL_BOKE_BY + 1).setValue('boke by');
+  Logger.log('Setup complete: AK〜AN列にヘッダーを追加しました。');
 }

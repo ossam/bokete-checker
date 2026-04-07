@@ -323,6 +323,110 @@
       color: var(--danger);
     }
 
+    /* ========== Credits (photo/odai/boke by) ========== */
+    .credits {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .credit-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .credit-label {
+      flex-shrink: 0;
+      width: 52px;
+      color: var(--text-muted);
+    }
+
+    .credit-value {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-family: var(--font-main);
+      font-size: 0.72rem;
+      text-align: left;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .credit-value:hover {
+      background: rgba(88, 166, 255, 0.12);
+      color: var(--accent-blue);
+    }
+
+    .credit-value.copied {
+      background: rgba(63, 185, 80, 0.18);
+      color: var(--success);
+    }
+
+    .credit-value.empty {
+      color: var(--text-muted);
+      font-style: italic;
+      cursor: default;
+    }
+
+    .credit-value.empty:hover {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* ========== Judgment Buttons (OK/NG) ========== */
+    .judgment-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .judgment-btn {
+      flex: 1;
+      padding: 6px 0;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .judgment-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .judgment-btn.ok.active {
+      background: rgba(63, 185, 80, 0.18);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .judgment-btn.ng.active {
+      background: rgba(248, 81, 73, 0.18);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .judgment-btn.saving {
+      animation: pulse 0.6s ease-in-out;
+    }
+
     /* ========== Card Link ========== */
     .card-link {
       font-size: 0.7rem;
@@ -798,6 +902,7 @@
     const STORAGE_KEY = 'bokete_checker_gas_url';
     const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwkxAwh47Ifjj_ZYymdOGo49SmGWARAxcar8WfiJjefIV_EvQK4AazWhgbnuX3dGW-6/exec';
     const IMAGE_CACHE_KEY = 'bokete_checker_images';
+    const META_CACHE_KEY = 'bokete_checker_meta';
     let GAS_URL = localStorage.getItem(STORAGE_KEY) || DEFAULT_GAS_URL;
 
     // ========== State ==========
@@ -805,6 +910,7 @@
     let sortOrder = 'desc';
     let activeFilter = 'all';
     let imageCache = {};
+    let metaCache = {};
     const PAGE_SIZE = 50;
     let displayCount = PAGE_SIZE;
 
@@ -813,6 +919,9 @@
       try {
         imageCache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
       } catch(e) { imageCache = {}; }
+      try {
+        metaCache = JSON.parse(localStorage.getItem(META_CACHE_KEY) || '{}');
+      } catch(e) { metaCache = {}; }
 
       initFilterTabs();
 
@@ -867,6 +976,7 @@
         renderCards();
         showToast(`${allData.length}件を読み込みました`, 'success');
         fetchMissingImages();
+        fetchMissingMeta();
       } catch (err) {
         console.error('Load error:', err);
         showToast('データの読み込みに失敗しました', 'error');
@@ -965,6 +1075,106 @@
       }
     }
 
+    // ========== Meta (photo by / odai by / boke by) ==========
+    function getMetaFor(item) {
+      // 優先: スプレッドシート → ローカルキャッシュ
+      if (item.photoBy || item.odaiBy || item.bokeBy) {
+        return { photoBy: item.photoBy || '', odaiBy: item.odaiBy || '', bokeBy: item.bokeBy || '' };
+      }
+      return metaCache[item.bokeId] || null;
+    }
+
+    function hasFullMeta(item) {
+      var m = getMetaFor(item);
+      return m && m.photoBy && m.odaiBy && m.bokeBy;
+    }
+
+    async function fetchMissingMeta() {
+      const missing = allData.filter(d => !hasFullMeta(d));
+      if (missing.length === 0) return;
+
+      for (let i = 0; i < missing.length; i += 3) {
+        const batch = missing.slice(i, i + 3);
+        const promises = batch.map(d => fetchSingleMeta(d.bokeId));
+        await Promise.allSettled(promises);
+        if (i + 3 < missing.length) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    }
+
+    async function fetchSingleMeta(bokeId) {
+      try {
+        const data = await fetchFromGAS('getMeta', { bokeId });
+        if (data && (data.photoBy || data.odaiBy || data.bokeBy)) {
+          metaCache[bokeId] = {
+            photoBy: data.photoBy || '',
+            odaiBy: data.odaiBy || '',
+            bokeBy: data.bokeBy || ''
+          };
+          localStorage.setItem(META_CACHE_KEY, JSON.stringify(metaCache));
+
+          // データ側にも反映
+          const item = allData.find(d => d.bokeId === bokeId);
+          if (item) {
+            item.photoBy = data.photoBy || '';
+            item.odaiBy = data.odaiBy || '';
+            item.bokeBy = data.bokeBy || '';
+          }
+
+          // カードを更新
+          updateCardCredits(bokeId);
+        }
+      } catch (e) {
+        console.error('Meta fetch error for ' + bokeId + ':', e);
+      }
+    }
+
+    function updateCardCredits(bokeId) {
+      const card = document.querySelector(`[data-boke-id="${bokeId}"]`);
+      if (!card) return;
+      const item = allData.find(d => d.bokeId === bokeId);
+      if (!item) return;
+      const credits = card.querySelector('.credits');
+      if (credits) credits.outerHTML = creditsHTML(item);
+    }
+
+    function creditsHTML(item) {
+      const m = getMetaFor(item) || {};
+      const line = (label, val) => {
+        if (val) {
+          return `<div class="credit-line"><span class="credit-label">${label}</span>` +
+                 `<button class="credit-value" onclick="copyCredit(this, '${escapeAttr(val)}')" title="クリックでコピー">${escapeHtml(val)}</button></div>`;
+        }
+        return `<div class="credit-line"><span class="credit-label">${label}</span>` +
+               `<span class="credit-value empty">取得中…</span></div>`;
+      };
+      return `<div class="credits">
+        ${line('photo by', m.photoBy)}
+        ${line('odai by', m.odaiBy)}
+        ${line('boke by', m.bokeBy)}
+      </div>`;
+    }
+
+    function escapeAttr(str) {
+      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    async function copyCredit(btn, text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.classList.add('copied');
+        const orig = btn.textContent;
+        btn.textContent = '✓ コピー済';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.textContent = orig;
+        }, 1200);
+      } catch (e) {
+        showToast('コピーに失敗しました', 'error');
+      }
+    }
+
     // ========== Rendering ==========
     function getFilteredData() {
       let filtered = [...allData];
@@ -1017,6 +1227,7 @@
       displayCount += PAGE_SIZE;
       renderCards();
       fetchMissingImages();
+      fetchMissingMeta();
     }
 
     function createCardHTML(item) {
@@ -1059,6 +1270,13 @@
                 bokete ↗
               </a>
             </div>
+            <div class="judgment-row">
+              <button class="judgment-btn ok ${item.judgment === 'OK' ? 'active' : ''}"
+                      onclick="setJudgment(${item.rowIndex}, '${item.bokeId}', 'OK')">OK</button>
+              <button class="judgment-btn ng ${item.judgment === 'NG' ? 'active' : ''}"
+                      onclick="setJudgment(${item.rowIndex}, '${item.bokeId}', 'NG')">NG</button>
+            </div>
+            ${creditsHTML(item)}
           </div>
         </div>`;
     }
@@ -1099,6 +1317,45 @@
         }
       }
       updateStats();
+    }
+
+    // ========== Judgment (OK/NG) ==========
+    async function setJudgment(rowIndex, bokeId, judgment) {
+      const item = allData.find(d => d.bokeId === bokeId);
+      // 同じボタンを再度クリックで解除
+      if (item && item.judgment === judgment) {
+        judgment = '';
+      }
+      if (item) item.judgment = judgment;
+
+      const card = document.querySelector(`[data-boke-id="${bokeId}"]`);
+      if (card) {
+        const okBtn = card.querySelector('.judgment-btn.ok');
+        const ngBtn = card.querySelector('.judgment-btn.ng');
+        if (okBtn) {
+          okBtn.classList.toggle('active', judgment === 'OK');
+          okBtn.classList.add('saving');
+        }
+        if (ngBtn) {
+          ngBtn.classList.toggle('active', judgment === 'NG');
+          ngBtn.classList.add('saving');
+        }
+      }
+
+      try {
+        await postToGAS({ action: 'updateJudgment', row: rowIndex, judgment: judgment });
+        if (card) {
+          card.querySelectorAll('.judgment-btn').forEach(b => b.classList.remove('saving'));
+        }
+        const label = judgment || 'クリア';
+        showToast(`判定を更新: ${label}`, 'success');
+      } catch (err) {
+        console.error('Judgment update error:', err);
+        showToast('判定の更新に失敗しました', 'error');
+        if (card) {
+          card.querySelectorAll('.judgment-btn').forEach(b => b.classList.remove('saving'));
+        }
+      }
     }
 
     // ========== Sort ==========
