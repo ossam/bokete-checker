@@ -790,6 +790,7 @@
 
       <input id="gasUrlInput" type="url" placeholder="https://script.google.com/macros/s/..." />
       <button class="btn-primary" onclick="saveGasUrl()">保存してデータを読み込む</button>
+      <button class="btn" style="display:block; margin:12px auto 0;" onclick="closeSettings()">閉じる</button>
     </div>
   </div>
 
@@ -915,6 +916,10 @@
       input.value = GAS_URL || '';
       modal.style.display = 'flex';
       setTimeout(() => { input.focus(); input.select(); }, 100);
+    }
+
+    function closeSettings() {
+      document.getElementById('setupModal').style.display = 'none';
     }
 
     function openHelp() {
